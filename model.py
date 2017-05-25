@@ -7,7 +7,7 @@ import sklearn
 from sklearn.model_selection import train_test_split
 from random import shuffle
 
-
+## preprocessing and filtering the sttering values
 steering = []
 training_folder = 'training3'
 with open(os.path.join(os.curdir, training_folder, 'driving_log.csv')) as csvfile:
@@ -16,12 +16,15 @@ with open(os.path.join(os.curdir, training_folder, 'driving_log.csv')) as csvfil
         steering.append(float(line[3]))
 steering = np.array(steering)
 steer_filt = np.zeros(np.shape(steering))
+# filtering the steering to gain smooth steering rather than spikes
 for i in range(0, len(steering)):
     steer_filt[i] = steering[max(0, i - 3):min(i + 4, len(steering))].mean()
 
 #plt.plot(range(0, len(steering)), steering, range(0, len(steering)), steer_filt)
-# plt.show()
+#plt.show()
 
+## creating a list repreestning different camera position (center, left, right) 
+# and mirrored images
 samples = []
 with open(os.path.join(os.curdir, training_folder, 'driving_log.csv')) as csvfile:
     reader = csv.reader(csvfile)
@@ -36,9 +39,10 @@ with open(os.path.join(os.curdir, training_folder, 'driving_log.csv')) as csvfil
         samples.append(line + ['1'] + ['1'])  # flipped right image
         i = i + 1
 
+# data is broken to training and validation by 80% and 20% ratio
 train_samples, validation_samples = train_test_split(samples, test_size=0.2)
 
-
+# generator to read the images and output a batch for training or validation
 def generator(samples, batch_size=32):
     num_samples = len(samples)
     while 1:  # Loop forever so the generator never terminates
@@ -49,13 +53,16 @@ def generator(samples, batch_size=32):
             images = []
             angles = []
             for batch_sample in batch_samples:
-                if (batch_sample[-2] == '0'):
+                if (batch_sample[-2] == '0'): 
+                    # original image, no steering modification
                     filepath, filename = os.path.split(batch_sample[0])
                     angle = float(batch_sample[3])
                 elif (batch_sample[-2] == '-1'):
+                    #left image, positive steering compensation
                     filepath, filename = os.path.split(batch_sample[1])
                     angle = float(batch_sample[3]) + 0.15
                 else:
+                    #right image, negative steering compensation
                     filepath, filename = os.path.split(batch_sample[2])
                     angle = float(batch_sample[3]) - 0.15
 
@@ -63,9 +70,11 @@ def generator(samples, batch_size=32):
                     os.curdir, training_folder, 'IMG', filename)
                 center_image = cv2.imread(image_path)
                 if (batch_sample[-1] == '0'):
+                    #original image
                     images.append(center_image)
                     angles.append(angle)
                 else:
+                    #mirrored image
                     images.append(np.fliplr(center_image))
                     angles.append(-angle)
 
@@ -95,23 +104,28 @@ from keras.layers.noise import GaussianDropout
 
 
 model = Sequential()
+# 60 pixel from top and 20 pixels from bottom of the image was cropped
 model.add(Cropping2D(cropping=((60, 25), (0, 0)), input_shape=(160, 320, 3)))
-model.add(Lambda(lambda x: (x / 255.0)))
-model.add(GaussianNoise(0.1))
+model.add(Lambda(lambda x: (x / 255.0))) # normalize the input to 0 and 1
+model.add(GaussianNoise(0.1)) #additive normal noise with 0.1 STD to prevent overfitting
 
+# I incorporated the nvidia netowrk 
 model.add(Conv2D(24, (5, 5), padding="valid", strides=(2, 2),
                  activation="relu", kernel_initializer="glorot_normal"))  # 24x36x158
 model.add(Conv2D(36, (5, 5), padding="valid", strides=(2, 2),
                  activation="relu", kernel_initializer="glorot_normal"))  # 36x16x77
 model.add(Conv2D(48, (5, 5), padding="valid", strides=(2, 2),
                  activation="relu", kernel_initializer="glorot_normal"))  # 48x6x37
-model.add(Conv2D(64, (4, 4), padding="valid", activation="relu",
+# since the origianl image was slightly bigger than the one used by nividia
+# I changed the filter size of layer 4 tom atch the features height at layer 5
+model.add(Conv2D(64, (4, 4), padding="valid", activation="relu", 
                  kernel_initializer="glorot_normal"))  # 64x3x34
 model.add(Conv2D(64, (3, 3), padding="valid", activation="relu",
                  kernel_initializer="glorot_normal"))  # 64x1x32
 
 model.add(Flatten())
-model.add(GaussianDropout(0.25))
+# multiplicative normal noise with mean 1 and STD around 0.5 to prevent overfitting
+model.add(GaussianDropout(0.25)) 
 
 model.add(Dense(100, activation="relu", kernel_initializer="glorot_normal"))
 model.add(Dense(50, activation="relu", kernel_initializer="glorot_normal"))

@@ -43,8 +43,8 @@ class SimplePIController:
         return self.Kp * self.error + self.Ki * self.integral
 
 
-controller = SimplePIController(0.1, 0.002)
-set_speed = 10
+controller = SimplePIController(0.3, 0.0002)
+set_speed = 25
 controller.set_desired(set_speed)
 
 
