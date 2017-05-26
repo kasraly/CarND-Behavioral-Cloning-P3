@@ -6,6 +6,13 @@
 [image2]: ./resources/shadow.jpg "Failed Scene"
 [image3]: ./resources/figure_1.png "Trainign and Validation Loss"
 [image4]: ./resources/steering_filter.png "Filtering Steering Values"
+[image5]: ./resources/bridge.jpg "bridge"
+[image6]: ./resources/RedStripeCurb.jpg "Curb with red stripes"
+[image7]: ./resources/Shadow2.jpg "Tree shadow on the road"
+[image8]: ./resources/SideDirt.jpg "Dirt on side of the road"
+[image9]: ./resources/center.jpg "Center"
+[image10]: ./resources/left.jpg "Left"
+[image11]: ./resources/right.jpg "Right"
 
 ---
 This report is the details about the behavioral cloning project of the Udacity self-driving car program.
@@ -64,7 +71,7 @@ Please see section blow on training data for more detail.
 
 ## Architecture and Training Documentation
 
-### Dolution design
+### Solution design
 
 The idea behind behavioral cloning is to predict the steering angle from images by showing the model appropriate steering values for various scenes.
 Since the input is an image, convolution layers will extract relevant features from the image, and fully connected layer will translate the features into steering angle. 
@@ -74,48 +81,60 @@ This model was able to achive very low training data loss with few epochs, but v
 I think the problem with LeNet network is that it is too big while not being deep enoguh. Since our input image is much larger than original LeNet architecture, there are many features after the last convolution layer resulting in farily big network. This would result in a much bigger betwork than what might be required for this task. Also two convolution layers might not be enough to extract the relevant features from the image. 
 
 Next I tried the Nvidia architecture. The Nvidia model consists of 5 convolution layers and 4 fully conenncted layers. I changed the filter size for 4th convolution layer from 3x3 to 4x4. Since the my input image size is different than original Nvidia model, this change would result in a height of 1 at the last convolution layer and keep the model consistent with Nvidia model. After careful training of the model, it would drive the car fairly smooth but still would fail in a few complex scence. see scenes below:
+
 ![alt text][image1] ![alt text][image2]
-It seemed that the percentage of trainign data for those scences is relatively small
 
+It seemed that the percentage of trainign data for those scences is relatively small compared to total training data. Therefore, the model would not sacrifice these scenes when minimizing the error for the rest of the training data. To overcome this, I identified the scences that were performing poorely and collected training data for those scenes only.
 
-Then I ... 
+Additionally, to minimize the impact of overfitting, I added two noise layers to the model. I included one additive noise layer at the input layer of the model. and one multiplicative noise layer after last convolution layer and flattening the features. With this addition the overfitting was not as significant as before and training could be performed for more epochs. 
 
-The final step was to run the simulator to see how well the car was driving around track one. There were a few spots where the vehicle fell off the track... to improve the driving behavior in these cases, I ....
+After collecting enough training data of the less frequent scenes, the model was able to succesfully control the car for the track #1 
 
-At the end of the process, the vehicle is able to drive autonomously around the track without leaving the road.
+### Final Model Architecture
 
-### 2. Final Model Architecture
+The final model architecture is presented in the table below. 
+  Layer #  | Operation |Input Size | Output Size
+  ------------- | -------------|--|--
+  1  | Cropping | 160x320x3| 75x320x3
+  2 | normalize to [0, 1] | 75x320x3 | 75x320x3
+  3  | Additive normal noise, mean=0, STD= 0.1 | 75x320x3|75x320x3
+4  | Conv2D, depth 24, filter: 5x5, strides 2x2, valid padding, ReLU | 75x320x3| 36x158x24
+5  | Conv2D, depth 36, filter: 5x5, strides 2x2, valid padding, ReLU | 36x158x24| 16x77x36
+6  | Conv2D, depth 48, filter: 5x5, strides 2x2, valid padding, ReLU | 16x77x36| 6x37x48
+7  | Conv2D, depth 64, filter: 4x4, strides 1x1, valid padding, ReLU | 6x37x48 | 3x34x64
+8  | Conv2D, depth 64, filter: 3x3, strides 1x1, valid padding, ReLU | 3x34x64 | 1x32x64
+9  | Flatten and Multiplicaitve Noise, mean = 1, STD ~ 0.5 | 1x32x64 | 2048
+10  | Fully connected , ReLU | 2048 | 100
+11  | Fully connected , ReLU | 100 | 50
+12  | Fully connected , ReLU | 50 | 10
+13  | Final Output, Fully connected , no activation | 10 | 1
 
-The final model architecture (model.py lines 18-24) consisted of a convolution neural network with the following layers and layer sizes ...
+I employed Adam optimizer for training with Mean Squared Error as the Loss fucntion.
+I used 25 Epochs of 100 mini-batch of 64 samples. note that each training epoch only inlcuded a fraction of training data. This was to observe and prevent overfitting. the evaluation was performed on the whole evaluation dataset after each epoch. 
 
-Here is a visualization of the architecture (note: visualizing the architecture is optional according to the project rubric)
+### Training Data Set & Training Process
 
-![alt text][image1]
+I started with recording one full lap oftrack #1 in the original direction and another full lap driving track #1 in the reverse direction. I maintained the car in the center of the track and avoided driving too fast. 
 
-### 3. Creation of the Training Set & Training Process
+I identified the follwoing scenes that are less frequent:
+- brige
+- curves with red stripes 
+- missing side lane marks
+- tree shadows 
 
-To capture good driving behavior, I first recorded two laps on track one using center lane driving. Here is an example image of center lane driving:
+Then I collected more training data for each scene type to make the ratio of  differnt scenes more equal. Images below show some of the less frequent scenes for whcih more training data was collected. 
 
-![alt text][image2]
+![alt text][image5]![alt text][image6]![alt text][image7]![alt text][image8]
 
-I then recorded the vehicle recovering from the left side and right sides of the road back to center so that the vehicle would learn to .... These images show what a recovery looks like starting from ... :
+I augmented each scene to 6 training sample by incoporating center, left and right images as well as the filpped version of these images. For left and right images, I added a correction of +0.15 and -0.15 to steering, respectively. When flipping the images, I also multiplied the coresponding steering value with -1. Images below, from left to right, show the camera perspective for left, centre and right images
 
-![alt text][image3]
+![alt text][image10]![alt text][image9]![alt text][image11]
+
+Since I used the keyboard to control the car during the training, the steering angles were spikes rather than smooth and gradual changes. I filtered the steering values using a moving average filter. I averged the value for 5 frames before and after each images and replaced that with steering value. image below show the raw steering and the filtered one.
+
 ![alt text][image4]
-![alt text][image5]
 
-Then I repeated this process on track two in order to get more data points.
+After the collection process (considering left, center, righI, and flipped images) I had 16000 data points. I randomly shuffled the data set and put 20% of the data into a validation set. 
+During training I employed mini-batches of 64 samples. I trained the model for 25 epochs. The training and validation loss is shown in figure below. Since I used the noise layers, the overfitting was not significant, but the reduction in loss after 25 epochs was minimal.
 
-To augment the data sat, I also flipped images and angles thinking that this would ... For example, here is an image that has then been flipped:
-
-![alt text][image6]
-![alt text][image7]
-
-Etc ....
-
-After the collection process, I had X number of data points. I then preprocessed this data by ...
-
-
-I finally randomly shuffled the data set and put Y% of the data into a validation set. 
-
-I used this training data for training the model. The validation set helped determine if the model was over or under fitting. The ideal number of epochs was Z as evidenced by ... I used an adam optimizer so that manually training the learning rate wasn't necessary.
+I used an adam optimizer so that manually training the learning rate wasn't necessary.

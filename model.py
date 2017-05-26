@@ -18,7 +18,7 @@ steering = np.array(steering)
 steer_filt = np.zeros(np.shape(steering))
 # filtering the steering to gain smooth steering rather than spikes
 for i in range(0, len(steering)):
-    steer_filt[i] = steering[max(0, i - 3):min(i + 4, len(steering))].mean()
+    steer_filt[i] = steering[max(0, i - 5):min(i + 6, len(steering))].mean()
 
 #plt.plot(range(0, len(steering)), steering, range(0, len(steering)), steer_filt)
 #plt.show()
@@ -106,7 +106,7 @@ from keras.layers.noise import GaussianDropout
 model = Sequential()
 # 60 pixel from top and 20 pixels from bottom of the image was cropped
 model.add(Cropping2D(cropping=((60, 25), (0, 0)), input_shape=(160, 320, 3)))
-model.add(Lambda(lambda x: (x / 255.0))) # normalize the input to 0 and 1
+model.add(Lambda(lambda x: (x / 255.0) - 0.5)) # normalize the input to 0 and 1
 model.add(GaussianNoise(0.1)) #additive normal noise with 0.1 STD to prevent overfitting
 
 # I incorporated the nvidia netowrk 
@@ -135,11 +135,11 @@ model.add(Dense(1, kernel_initializer="glorot_normal"))
 
 model.compile(loss='mse', optimizer='adam')
 history_object = model.fit_generator(train_generator,
-                        steps_per_epoch=100,
+                        steps_per_epoch=len(train_samples) / 64,
                         validation_data=validation_generator,
                         validation_steps=len(validation_samples) / 64,
                         epochs=25,
-                        verbose=2)
+                        verbose=1)
 
 model.save('model.h5')
 
