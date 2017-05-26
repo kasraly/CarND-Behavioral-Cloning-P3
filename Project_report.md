@@ -138,4 +138,6 @@ Since I used the keyboard to control the car during the training, the steering a
 After the collection process (considering left, center, righI, and flipped images) I had 16000 data points. I randomly shuffled the data set and put 20% of the data into a validation set. 
 During training I employed mini-batches of 64 samples. I trained the model for 25 epochs. The training and validation loss is shown in figure below. Since I used the noise layers, the overfitting was not significant, but the reduction in loss after 25 epochs was minimal.
 
+![alt text][image3]
+
 I used an adam optimizer so that manually training the learning rate wasn't necessary.
