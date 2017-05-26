@@ -93,6 +93,7 @@ After collecting enough training data of the less frequent scenes, the model was
 ### Final Model Architecture
 
 The final model architecture is presented in the table below. 
+
   Layer #  | Operation |Input Size | Output Size
   ------------- | -------------|--|--
   1  | Cropping | 160x320x3| 75x320x3
